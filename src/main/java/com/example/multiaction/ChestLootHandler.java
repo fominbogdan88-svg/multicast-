@@ -1,5 +1,8 @@
 package com.example.multiaction;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -13,12 +16,10 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Mod.EventBusSubscriber(modid = MultiActionMod.MODID)
 public final class ChestLootHandler {
@@ -30,11 +31,7 @@ public final class ChestLootHandler {
     public static void onChestInteract(
             PlayerInteractEvent.RightClickBlock event
     ) {
-        if (event.isCanceled()) {
-            return;
-        }
-
-        if (event.getUseBlock() == net.minecraftforge.eventbus.api.Event.Result.DENY) {
+        if (event.isCanceled() || event.getUseBlock() == Event.Result.DENY) {
             return;
         }
 
@@ -63,18 +60,18 @@ public final class ChestLootHandler {
         }
 
         /*
-         * Таблица добычи есть только до генерации содержимого.
-         * После генерации она удаляется игрой, поэтому при повторном
-         * открытии этот обработчик не запустится.
+         * Проверяем сохранённые данные сундука. LootTable присутствует
+         * до генерации добычи и удаляется при её генерации.
+         * Число 8 означает строковый NBT-тег.
          */
-        if (chest.getLootTable() == null) {
+        if (!chest.saveWithoutMetadata().contains("LootTable", 8)) {
             return;
         }
 
-        // Сначала создаём обычную добычу сундука.
+        // Создаём обычную добычу сундука.
         chest.unpackLootTable(player);
 
-        // Равные шансы на каждый результат от x0 до x8.
+        // Равные шансы от x0 до x8.
         int multiplier = level.random.nextInt(9);
 
         List<ItemStack> originalItems = new ArrayList<>();
@@ -117,7 +114,7 @@ public final class ChestLootHandler {
 
         chest.setChanged();
 
-        // Если сундук заполнен, лишние предметы появляются рядом.
+        // Предметы, которые не поместились, появляются рядом.
         for (ItemStack stack : overflow) {
             ItemEntity item = new ItemEntity(
                     level,
@@ -143,13 +140,12 @@ public final class ChestLootHandler {
         double centerY = pos.getY() + 0.7D;
         double centerZ = pos.getZ() + 0.5D;
 
-        // Кольцо частиц вокруг сундука, видимое игрокам рядом.
         int points = 32;
 
         for (int i = 0; i < points; i++) {
             double angle = 2.0D * Math.PI * i / points;
-            double x = centerX + Math.cos(angle) * 1.0D;
-            double z = centerZ + Math.sin(angle) * 1.0D;
+            double x = centerX + Math.cos(angle);
+            double z = centerZ + Math.sin(angle);
 
             level.sendParticles(
                     ParticleTypes.HAPPY_VILLAGER,
@@ -189,7 +185,6 @@ public final class ChestLootHandler {
                 ? Component.literal("§c✘ Сундук: добыча сорвалась! x0")
                 : Component.literal("§6✦ Сундук удачи: §ex" + multiplier);
 
-        // Результат видят над хотбаром все игроки в радиусе 16 блоков.
         AABB area = new AABB(pos).inflate(16.0D);
 
         for (ServerPlayer nearby : level.getEntitiesOfClass(
