@@ -16,7 +16,7 @@ import java.util.function.Supplier;
 
 public final class ModNetwork {
 
-    private static final String PROTOCOL_VERSION = "1";
+    private static final String PROTOCOL_VERSION = "2";
 
     private static final SimpleChannel CHANNEL =
             NetworkRegistry.ChannelBuilder
@@ -41,6 +41,15 @@ public final class ModNetwork {
                 RoulettePacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT)
         );
+
+        CHANNEL.registerMessage(
+                1,
+                GasPacket.class,
+                GasPacket::encode,
+                GasPacket::decode,
+                GasPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER)
+        );
     }
 
     public static void sendRoulette(
@@ -51,6 +60,10 @@ public final class ModNetwork {
                 PacketDistributor.PLAYER.with(() -> player),
                 new RoulettePacket(multiplier)
         );
+    }
+
+    public static void sendGasRequest() {
+        CHANNEL.sendToServer(new GasPacket());
     }
 
     public static final class RoulettePacket {
@@ -81,11 +94,40 @@ public final class ModNetwork {
             context.enqueueWork(() ->
                     DistExecutor.unsafeRunWhenOn(
                             Dist.CLIENT,
-                            () -> () -> ClientRoulette.open(
-                                    packet.multiplier
-                            )
+                            () -> () -> ClientRoulette.open(packet.multiplier)
                     )
             );
+
+            context.setPacketHandled(true);
+        }
+    }
+
+    public static final class GasPacket {
+
+        public static void encode(
+                GasPacket packet,
+                FriendlyByteBuf buffer
+        ) {
+            // Дополнительных данных нет.
+        }
+
+        public static GasPacket decode(FriendlyByteBuf buffer) {
+            return new GasPacket();
+        }
+
+        public static void handle(
+                GasPacket packet,
+                Supplier<NetworkEvent.Context> contextSupplier
+        ) {
+            NetworkEvent.Context context = contextSupplier.get();
+
+            context.enqueueWork(() -> {
+                ServerPlayer player = context.getSender();
+
+                if (player != null) {
+                    GasAttack.trigger(player);
+                }
+            });
 
             context.setPacketHandled(true);
         }
