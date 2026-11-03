@@ -1,16 +1,14 @@
 package com.example.multiaction;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.entity.player.ItemFishedEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Mod.EventBusSubscriber(modid = MultiActionMod.MODID)
 public final class FishingHandler {
@@ -18,26 +16,47 @@ public final class FishingHandler {
     private FishingHandler() {
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onItemFished(ItemFishedEvent event) {
+        if (event.isCanceled()) {
+            return;
+        }
+
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
 
-        List<ItemStack> drops = event.getDrops();
+        if (!(player.level() instanceof ServerLevel level)) {
+            return;
+        }
 
-        // Если улова нет, не выполняем бросок.
-        if (drops.isEmpty()) {
+        boolean hasCatch = false;
+
+        for (ItemStack stack : event.getDrops()) {
+            if (!stack.isEmpty()) {
+                hasCatch = true;
+                break;
+            }
+        }
+
+        // При отсутствии улова не выбираем множитель.
+        if (!hasCatch) {
             return;
         }
 
         int multiplier = MulticastManager.roll(player);
 
         if (multiplier == 0) {
-            drops.clear();
+            // Отменяем событие вместо изменения списка улова.
+            event.setCanceled(true);
 
             MultiplierDisplay.show(player, 0);
-            showResult(player, 0);
+
+            player.displayClientMessage(
+                    Component.literal("§c✘ Рыбалка: улов сорвался!"),
+                    true
+            );
+
             return;
         }
 
@@ -45,50 +64,49 @@ public final class FishingHandler {
             return;
         }
 
-        List<ItemStack> multipliedDrops = new ArrayList<>();
+        int spawnedStacks = 0;
 
-        for (ItemStack original : drops) {
+        for (ItemStack original : event.getDrops()) {
             if (original.isEmpty()) {
                 continue;
             }
 
-            long remaining = (long) original.getCount() * multiplier;
+            // Один исходный улов создаст сама игра.
+            long remaining = (long) original.getCount() * (multiplier - 1);
             int maxStackSize = original.getMaxStackSize();
 
-            // Разделяем результат на допустимые стаки.
             while (remaining > 0) {
                 int count = (int) Math.min(remaining, maxStackSize);
 
+                // copy() сохраняет данные предмета, например зачарования.
                 ItemStack copy = original.copy();
                 copy.setCount(count);
 
-                multipliedDrops.add(copy);
+                ItemEntity extra = new ItemEntity(
+                        level,
+                        player.getX(),
+                        player.getY() + 0.5D,
+                        player.getZ(),
+                        copy
+                );
+
+                extra.setDefaultPickUpDelay();
+
+                if (level.addFreshEntity(extra)) {
+                    spawnedStacks++;
+                }
+
                 remaining -= count;
             }
         }
 
-        drops.clear();
-        drops.addAll(multipliedDrops);
+        if (spawnedStacks > 0) {
+            MultiplierDisplay.show(player, multiplier);
 
-        MultiplierDisplay.show(player, multiplier);
-        showResult(player, multiplier);
-    }
-
-    private static void showResult(
-            ServerPlayer player,
-            int multiplier
-    ) {
-        String message = multiplier == 0
-                ? "§c✘ Рыбалка: улов сорвался!"
-                : "§e✦ Мультиулов: x" + multiplier;
-
-        player.displayClientMessage(Component.literal(message), true);
-
-        player.playNotifySound(
-                SoundEvents.EXPERIENCE_ORB_PICKUP,
-                SoundSource.PLAYERS,
-                0.25F,
-                multiplier == 0 ? 0.8F : 1.4F
-        );
+            player.displayClientMessage(
+                    Component.literal("§e✦ Мультиулов: x" + multiplier),
+                    true
+            );
+        }
     }
 }
