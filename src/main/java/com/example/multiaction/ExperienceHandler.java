@@ -32,6 +32,8 @@ public final class ExperienceHandler {
         if (multiplier == 0) {
             event.setAmount(0);
 
+            MultiplierDisplay.show(player, 0);
+
             player.displayClientMessage(
                     Component.literal("§c✘ Получение опыта сорвалось!"),
                     true
@@ -50,6 +52,8 @@ public final class ExperienceHandler {
         event.setAmount(
                 (int) Math.min(multipliedXp, Integer.MAX_VALUE)
         );
+
+        MultiplierDisplay.show(player, multiplier);
 
         player.displayClientMessage(
                 Component.literal("§a✦ Мультиопыт: x" + multiplier),
