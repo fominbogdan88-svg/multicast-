@@ -52,6 +52,8 @@ public final class FoodHandler {
             );
         }
 
+        MultiplierDisplay.show(player, multiplier);
+
         player.displayClientMessage(
                 Component.literal("§6✦ Мультипитание: x" + multiplier),
                 true
