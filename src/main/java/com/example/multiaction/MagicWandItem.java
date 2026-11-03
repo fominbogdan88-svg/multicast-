@@ -249,7 +249,6 @@ public class MagicWandItem extends Item {
                 radius / 2.0D,
                 0.5D,
                 radius / 2.0D,
-                radius / 2.0D,
                 0.02D
         );
     }
