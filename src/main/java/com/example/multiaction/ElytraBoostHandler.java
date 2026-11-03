@@ -1,21 +1,31 @@
 package com.example.multiaction;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber(modid = MultiActionMod.MODID)
 public final class ElytraBoostHandler {
 
-    // Ограничение дополнительного импульса за одно использование.
-    private static final double MAX_EXTRA_BOOST = 1.2D;
+    // Примерная базовая длительность: 1,5 секунды.
+    private static final int BASE_DURATION_TICKS = 30;
+
+    // Если игрок почти неподвижен, используем минимальную начальную скорость.
+    private static final double MIN_START_SPEED = 0.5D;
+
+    private static final Map<UUID, Boost> ACTIVE_BOOSTS = new HashMap<>();
 
     private ElytraBoostHandler() {
     }
@@ -34,10 +44,7 @@ public final class ElytraBoostHandler {
             return;
         }
 
-        /*
-         * Если в основной руке есть ракета, обрабатываем именно её.
-         * Это помогает избежать двух бросков при использовании двух рук.
-         */
+        // Не обрабатываем вторую руку, если ракета есть в основной.
         if (event.getHand() == InteractionHand.OFF_HAND
                 && player.getMainHandItem().is(Items.FIREWORK_ROCKET)) {
             return;
@@ -45,43 +52,97 @@ public final class ElytraBoostHandler {
 
         int multiplier = MulticastManager.roll(player);
 
-        if (multiplier <= 1) {
-            if (multiplier == 0) {
-                MultiplierDisplay.show(player, 0);
+        if (multiplier == 0) {
+            MultiplierDisplay.show(player, 0);
 
-                player.displayClientMessage(
-                        Component.literal("§7Дополнительное ускорение сорвалось"),
-                        true
-                );
-            }
+            player.displayClientMessage(
+                    Component.literal("§c✘ Дополнительное ускорение сорвалось!"),
+                    true
+            );
+
+            // Обычную ракету не отменяем.
             return;
         }
 
-        double boost = Math.min(
-                MAX_EXTRA_BOOST,
-                (multiplier - 1) * 0.08D
-        );
+        if (multiplier == 1) {
+            return;
+        }
 
-        Vec3 direction = player.getLookAngle();
-        player.setDeltaMovement(
-                player.getDeltaMovement().add(direction.scale(boost))
-        );
+        double currentSpeed = player.getDeltaMovement().length();
+        double startingSpeed = Math.max(MIN_START_SPEED, currentSpeed);
 
-        // Помечаем изменение скорости для синхронизации с клиентом.
-        player.hurtMarked = true;
+        // Без верхнего ограничения, как ты попросил.
+        double targetSpeed = startingSpeed * multiplier;
+        int duration = BASE_DURATION_TICKS * multiplier;
+
+        ACTIVE_BOOSTS.put(
+                player.getUUID(),
+                new Boost(targetSpeed, duration)
+        );
 
         MultiplierDisplay.show(player, multiplier);
 
         player.displayClientMessage(
-                Component.literal("§b✦ Мультиускорение: x" + multiplier),
+                Component.literal(
+                        "§b✦ Мультиускорение: x" + multiplier
+                                + " §7(скорость и время)"
+                ),
                 true
         );
+    }
 
-        player.playNotifySound(
-                SoundEvents.EXPERIENCE_ORB_PICKUP,
-                SoundSource.PLAYERS,
-                0.2F,
-                1.4F
-        );
+    @SubscribeEvent
+    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
+
+        if (!(event.player instanceof ServerPlayer player)) {
+            return;
+        }
+
+        UUID id = player.getUUID();
+        Boost boost = ACTIVE_BOOSTS.get(id);
+
+        if (boost == null) {
+            return;
+        }
+
+        // Прекращаем ускорение после приземления или смерти.
+        if (!player.isAlive() || !player.isFallFlying()) {
+            ACTIVE_BOOSTS.remove(id);
+            return;
+        }
+
+        Vec3 direction = player.getLookAngle().normalize();
+
+        // Скорость задаётся относительно направления взгляда.
+        // Она не умножается повторно каждый тик.
+        player.setDeltaMovement(direction.scale(boost.speed()));
+        player.hurtMarked = true;
+
+        int remaining = boost.remainingTicks() - 1;
+
+        if (remaining <= 0) {
+            ACTIVE_BOOSTS.remove(id);
+        } else {
+            ACTIVE_BOOSTS.put(
+                    id,
+                    new Boost(boost.speed(), remaining)
+            );
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        ACTIVE_BOOSTS.remove(event.getEntity().getUUID());
+    }
+
+    @SubscribeEvent
+    public static void onServerStopped(ServerStoppedEvent event) {
+        ACTIVE_BOOSTS.clear();
+    }
+
+    private record Boost(double speed, int remainingTicks) {
     }
 }
