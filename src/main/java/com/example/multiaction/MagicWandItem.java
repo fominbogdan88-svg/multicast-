@@ -12,10 +12,10 @@ import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.LightningBolt;
-import net.minecraft.world.entity.monster.EvokerFangs;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.EvokerFangs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -41,7 +41,6 @@ public class MagicWandItem extends Item {
         super(new Item.Properties().stacksTo(1));
     }
 
-    // Палочка всегда имеет визуальный эффект зачарования.
     @Override
     public boolean isFoil(ItemStack stack) {
         return true;
@@ -88,7 +87,7 @@ public class MagicWandItem extends Item {
             return InteractionResultHolder.fail(stack);
         }
 
-        // Снимаем именно очки опыта, не уровни.
+        // Снимаем очки опыта, а не целые уровни.
         player.giveExperiencePoints(-XP_COST);
 
         int multiplier = MulticastManager.roll(serverPlayer);
@@ -102,10 +101,6 @@ public class MagicWandItem extends Item {
             return InteractionResultHolder.consume(stack);
         }
 
-        /*
-         * Точка прицела определяется обычным лучом Minecraft.
-         * Заклинания действуют около этой точки.
-         */
         HitResult hit = player.pick(24.0D, 0.0F, false);
         Vec3 target = hit.getLocation();
 
@@ -281,8 +276,7 @@ public class MagicWandItem extends Item {
     }
 
     /**
-     * Считает очки, которые игрок может потратить, включая
-     * заполненную часть текущего уровня.
+     * Считает доступные очки опыта, включая прогресс текущего уровня.
      */
     private static int getAvailableExperience(Player player) {
         int level = player.experienceLevel;
@@ -291,13 +285,22 @@ public class MagicWandItem extends Item {
         if (level <= 16) {
             base = level * level + 6 * level;
         } else if (level <= 31) {
-            base = (int) (2.5D * level * level - 40.5D * level + 360.0D);
+            base = (int) (
+                    2.5D * level * level
+                            - 40.5D * level
+                            + 360.0D
+            );
         } else {
-            base = (int) (4.5D * level * level - 162.5D * level + 2220.0D);
+            base = (int) (
+                    4.5D * level * level
+                            - 162.5D * level
+                            + 2220.0D
+            );
         }
 
         int progress = Math.round(
-                player.experienceProgress * player.getXpNeededForNextLevel()
+                player.experienceProgress
+                        * player.getXpNeededForNextLevel()
         );
 
         return base + progress;
