@@ -17,12 +17,14 @@ public class MultiActionMod {
 
     public static final String MODID = "multiaction";
 
+    // Регистрация предметов.
     public static final DeferredRegister<Item> ITEMS =
             DeferredRegister.create(ForgeRegistries.ITEMS, MODID);
 
     public static final RegistryObject<Item> HAND_OF_MIDAS =
             ITEMS.register("hand_of_midas", HandOfMidasItem::new);
 
+    // Регистрация модификатора дропа блоков.
     public static final DeferredRegister<Codec<? extends IGlobalLootModifier>>
             LOOT_MODIFIERS = DeferredRegister.create(
                     ForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS,
@@ -40,6 +42,9 @@ public class MultiActionMod {
 
         ITEMS.register(modBus);
         LOOT_MODIFIERS.register(modBus);
+
+        // Регистрация пакета для интерфейса рулетки.
+        ModNetwork.register();
     }
 
     @Mod.EventBusSubscriber(modid = MODID)
@@ -47,6 +52,7 @@ public class MultiActionMod {
 
         @SubscribeEvent
         public static void onServerStopped(ServerStoppedEvent event) {
+            // Текущие настройки множителей хранятся только в памяти.
             MulticastManager.clearAll();
         }
     }
