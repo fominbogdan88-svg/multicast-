@@ -17,7 +17,6 @@ public class MultiActionMod {
 
     public static final String MODID = "multiaction";
 
-    // Регистрация предметов.
     public static final DeferredRegister<Item> ITEMS =
             DeferredRegister.create(ForgeRegistries.ITEMS, MODID);
 
@@ -27,7 +26,6 @@ public class MultiActionMod {
     public static final RegistryObject<Item> MAGIC_WAND =
             ITEMS.register("magic_wand", MagicWandItem::new);
 
-    // Регистрация модификатора дропа блоков.
     public static final DeferredRegister<Codec<? extends IGlobalLootModifier>>
             LOOT_MODIFIERS = DeferredRegister.create(
                     ForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS,
@@ -40,13 +38,18 @@ public class MultiActionMod {
                     () -> BlockDropsModifier.CODEC
             );
 
+    public static final RegistryObject<Codec<? extends IGlobalLootModifier>>
+            PIGLIN_BARTER_MODIFIER = LOOT_MODIFIERS.register(
+                    "piglin_barter",
+                    () -> PiglinBarterModifier.CODEC
+            );
+
     public MultiActionMod() {
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
 
         ITEMS.register(modBus);
         LOOT_MODIFIERS.register(modBus);
 
-        // Сеть для рулетки и газовой атаки.
         ModNetwork.register();
     }
 
@@ -55,7 +58,6 @@ public class MultiActionMod {
 
         @SubscribeEvent
         public static void onServerStopped(ServerStoppedEvent event) {
-            // Очищаем данные, хранящиеся в памяти.
             MulticastManager.clearAll();
             GasAttack.clearAll();
         }
