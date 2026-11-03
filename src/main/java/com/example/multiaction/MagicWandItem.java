@@ -93,6 +93,8 @@ public class MagicWandItem extends Item {
         int multiplier = MulticastManager.roll(serverPlayer);
 
         if (multiplier == 0) {
+            MultiplierDisplay.show(serverPlayer, 0);
+
             player.displayClientMessage(
                     Component.literal("§c✘ Заклинание сорвалось!"),
                     true
@@ -113,6 +115,9 @@ public class MagicWandItem extends Item {
                 return InteractionResultHolder.fail(stack);
             }
         }
+
+        // Метод не показывает надпись при x1.
+        MultiplierDisplay.show(serverPlayer, multiplier);
 
         player.displayClientMessage(
                 Component.literal(
@@ -243,6 +248,7 @@ public class MagicWandItem extends Item {
                 50,
                 radius / 2.0D,
                 0.5D,
+                radius / 2.0D,
                 radius / 2.0D,
                 0.02D
         );
