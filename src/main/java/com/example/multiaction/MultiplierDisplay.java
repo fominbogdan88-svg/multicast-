@@ -17,10 +17,6 @@ public class MultiplierDisplay {
     private static final String OWNER_TAG = "MultiActionDisplayOwner";
     private static final String EXPIRES_TAG = "MultiActionDisplayExpires";
 
-    /**
-     * Показывает множитель над сущностью примерно на две секунды.
-     * x1 не показывается.
-     */
     public static void show(Entity owner, int multiplier) {
         if (!(owner.level() instanceof ServerLevel level)) {
             return;
@@ -41,7 +37,6 @@ public class MultiplierDisplay {
         display.setNoGravity(true);
         display.setInvulnerable(true);
         display.setSilent(true);
-        display.setSmall(true);
         display.noPhysics = true;
 
         if (multiplier <= 0) {
