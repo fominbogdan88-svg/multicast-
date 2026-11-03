@@ -50,6 +50,8 @@ public class BlockDropsModifier extends LootModifier {
         if (multiplier == 0) {
             generatedLoot.clear();
 
+            MultiplierDisplay.show(player, 0);
+
             player.displayClientMessage(
                     Component.literal("§c✘ Дроп блока сорвался!"),
                     true
@@ -83,6 +85,8 @@ public class BlockDropsModifier extends LootModifier {
                 remaining -= count;
             }
         }
+
+        MultiplierDisplay.show(player, multiplier);
 
         player.displayClientMessage(
                 Component.literal("§6✦ Дроп блока: x" + multiplier),
