@@ -31,33 +31,29 @@ public final class CraftingHandler {
         int multiplier;
 
         if (roll == 0) {
-            multiplier = 3;
+            multiplier = 3; // 0,1%
         } else if (roll <= 10) {
-            multiplier = 2;
+            multiplier = 2; // 1%
         } else {
             return;
         }
 
-        /*
-         * Оригинальный результат уже выдаёт Minecraft.
-         * Поэтому добавляем только дополнительные копии:
-         *
-         * x2 → одна дополнительная копия;
-         * x3 → две дополнительные копии.
-         */
-        int extraCopies = multiplier - 1;
-
-        for (int i = 0; i < extraCopies; i++) {
+        // Один результат выдаёт сам Minecraft.
+        for (int i = 1; i < multiplier; i++) {
             ItemStack extra = crafted.copy();
 
-            // После add() в extra остаётся то, что не поместилось.
             player.getInventory().add(extra);
 
+            // Если инвентарь заполнен, остаток выпадает рядом.
             if (!extra.isEmpty()) {
                 player.drop(extra, false);
             }
         }
 
+        // Надпись видна окружающим над головой игрока.
+        MultiplierDisplay.show(player, multiplier);
+
+        // Личное уведомление над панелью быстрого доступа.
         player.displayClientMessage(
                 Component.literal("§6✦ Редкий мультикрафт: x" + multiplier),
                 true
