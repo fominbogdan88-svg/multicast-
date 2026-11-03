@@ -44,6 +44,7 @@ public final class BreedingHandler {
         int multiplier = MulticastManager.roll(player);
 
         if (multiplier <= 1) {
+            // Как и раньше, обычный детёныш остаётся даже при x0.
             return;
         }
 
@@ -72,6 +73,10 @@ public final class BreedingHandler {
         }
 
         if (spawned > 0) {
+            // Показываем фактическое число детёнышей:
+            // дополнительные плюс один обычный.
+            MultiplierDisplay.show(player, spawned + 1);
+
             player.displayClientMessage(
                     Component.literal(
                             "§a✦ Мультиразмножение: дополнительно "
