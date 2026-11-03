@@ -33,22 +33,20 @@ public final class MobProjectileHandler {
             return;
         }
 
-        // Поплавки удочек никогда не копируем.
+        // Поплавки удочек не копируем.
         if (original instanceof FishingHook) {
             return;
         }
 
-        // Не обрабатываем снаряд повторно.
         if (original.getPersistentData().getBoolean(PROCESSED_TAG)) {
             return;
         }
 
-        // Механика предназначена только для снарядов мобов.
+        // Обрабатываем только снаряды, владельцем которых указан моб.
         if (!(original.getOwner() instanceof Mob shooter)) {
             return;
         }
 
-        // Метка сохраняется вместе с сущностью.
         original.getPersistentData().putBoolean(PROCESSED_TAG, true);
 
         int roll = shooter.getRandom().nextInt(1000);
@@ -70,11 +68,10 @@ public final class MobProjectileHandler {
             }
         }
 
-        /*
-         * Надпись над головой пока не добавлена.
-         * Подключим её к copiesCreated + 1, когда создадим
-         * общий обработчик видимых множителей.
-         */
+        // Показываем фактическое количество снарядов над головой моба.
+        if (copiesCreated > 0) {
+            MultiplierDisplay.show(shooter, copiesCreated + 1);
+        }
     }
 
     private static boolean createCopy(
@@ -88,21 +85,17 @@ public final class MobProjectileHandler {
             return false;
         }
 
-        /*
-         * Сохраняем данные исходного снаряда: положение, скорость
-         * и поддерживаемые его типом дополнительные свойства.
-         */
         CompoundTag data = new CompoundTag();
         original.saveWithoutId(data);
 
-        // У копии должен быть свой UUID.
+        // Копии нужен собственный UUID.
         data.remove("UUID");
         copy.load(data);
         copy.setUUID(UUID.randomUUID());
 
         copy.setOwner(shooter);
 
-        // Ставим метку до добавления сущности в мир.
+        // Метка ставится до добавления копии в мир.
         copy.getPersistentData().putBoolean(PROCESSED_TAG, true);
 
         // Дополнительные стрелы и трезубцы нельзя подобрать в выживании.
@@ -112,7 +105,6 @@ public final class MobProjectileHandler {
 
         Vec3 motion = original.getDeltaMovement();
 
-        // Небольшой разброс направления.
         copy.setDeltaMovement(
                 motion.add(
                         (shooter.getRandom().nextDouble() - 0.5D) * 0.08D,
