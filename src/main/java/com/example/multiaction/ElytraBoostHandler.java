@@ -47,6 +47,8 @@ public final class ElytraBoostHandler {
 
         if (multiplier <= 1) {
             if (multiplier == 0) {
+                MultiplierDisplay.show(player, 0);
+
                 player.displayClientMessage(
                         Component.literal("§7Дополнительное ускорение сорвалось"),
                         true
@@ -67,6 +69,8 @@ public final class ElytraBoostHandler {
 
         // Помечаем изменение скорости для синхронизации с клиентом.
         player.hurtMarked = true;
+
+        MultiplierDisplay.show(player, multiplier);
 
         player.displayClientMessage(
                 Component.literal("§b✦ Мультиускорение: x" + multiplier),
