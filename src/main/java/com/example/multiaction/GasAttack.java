@@ -55,6 +55,9 @@ public final class GasAttack {
 
         int multiplier = MulticastManager.roll(player);
 
+        // x1 не показывается, x0 показывает «Срыв!».
+        MultiplierDisplay.show(player, multiplier);
+
         if (multiplier == 0) {
             player.displayClientMessage(
                     Component.literal("§c✘ Газовая атака сорвалась!"),
