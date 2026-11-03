@@ -47,6 +47,8 @@ public final class TntHandler {
         if (multiplier == 0) {
             event.setCanceled(true);
 
+            MultiplierDisplay.show(player, 0);
+
             player.displayClientMessage(
                     Component.literal("§c✘ Поджигание TNT сорвалось!"),
                     true
@@ -88,6 +90,9 @@ public final class TntHandler {
         }
 
         if (created > 0) {
+            // Дополнительные заряды плюс исходный.
+            MultiplierDisplay.show(player, created + 1);
+
             player.displayClientMessage(
                     Component.literal(
                             "§6✦ Мульти-TNT: "
