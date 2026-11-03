@@ -7,7 +7,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.AbstractArrow;
-import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -16,9 +15,7 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = "multiaction")
 public class PlayerProjectileHandler {
 
-    /*
-     * Защита от повторного копирования уже созданных копий.
-     */
+    // Не обрабатываем созданные копии повторно.
     private static final ThreadLocal<Boolean> CREATING_COPIES =
             ThreadLocal.withInitial(() -> false);
 
@@ -32,16 +29,8 @@ public class PlayerProjectileHandler {
             return;
         }
 
-        if (!(event.getEntity() instanceof Projectile projectile)) {
-            return;
-        }
-
-        /*
-         * Работаем только со стрелами, трезубцами и ракетами.
-         * Рыболовные поплавки и остальные снаряды не копируются.
-         */
-        if (!(projectile instanceof AbstractArrow)
-                && !(projectile instanceof FireworkRocketEntity)) {
+        // AbstractArrow включает стрелы и трезубцы.
+        if (!(event.getEntity() instanceof AbstractArrow projectile)) {
             return;
         }
 
@@ -55,16 +44,16 @@ public class PlayerProjectileHandler {
             return;
         }
 
-        MultiplierDisplay.show(player, multiplier);
-
         if (multiplier <= 0) {
             event.setCanceled(true);
+            MultiplierDisplay.show(player, 0);
             return;
         }
 
         CompoundTag projectileData = new CompoundTag();
         projectile.saveWithoutId(projectileData);
 
+        int createdCount = 0;
         CREATING_COPIES.set(true);
 
         try {
@@ -77,9 +66,7 @@ public class PlayerProjectileHandler {
 
                 CompoundTag copyData = projectileData.copy();
 
-                /*
-                 * Каждому снаряду нужен собственный UUID.
-                 */
+                // Каждой копии нужен собственный UUID.
                 copyData.remove("UUID");
                 copy.load(copyData);
                 copy.setUUID(UUID.randomUUID());
@@ -92,19 +79,22 @@ public class PlayerProjectileHandler {
                 );
                 copy.setDeltaMovement(projectile.getDeltaMovement());
 
-                /*
-                 * Копии стрел и трезубцев нельзя подобрать
-                 * в выживании, чтобы не получать бесплатные предметы.
-                 * Оригинальный снаряд сохраняет обычные правила подбора.
-                 */
+                // Дополнительные снаряды нельзя подобрать в выживании.
                 if (copy instanceof AbstractArrow arrowCopy) {
                     arrowCopy.pickup = AbstractArrow.Pickup.CREATIVE_ONLY;
                 }
 
-                level.addFreshEntity(copy);
+                if (level.addFreshEntity(copy)) {
+                    createdCount++;
+                }
             }
         } finally {
             CREATING_COPIES.remove();
+        }
+
+        if (createdCount > 0) {
+            // Копии плюс исходный снаряд.
+            MultiplierDisplay.show(player, createdCount + 1);
         }
     }
 }
