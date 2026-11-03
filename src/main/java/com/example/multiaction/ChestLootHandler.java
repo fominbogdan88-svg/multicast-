@@ -5,6 +5,7 @@ import java.util.List;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -12,8 +13,11 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.Event;
@@ -53,26 +57,49 @@ public final class ChestLootHandler {
             return;
         }
 
+        BlockState state = level.getBlockState(pos);
         BlockEntity blockEntity = level.getBlockEntity(pos);
 
-        if (!(blockEntity instanceof ChestBlockEntity chest)) {
+        if (!(state.getBlock() instanceof ChestBlock)
+                || !(blockEntity instanceof ChestBlockEntity chest)) {
             return;
         }
 
-        /*
-         * Проверяем сохранённые данные сундука. LootTable присутствует
-         * до генерации добычи и удаляется при её генерации.
-         * Число 8 означает строковый NBT-тег.
-         */
-        if (!chest.saveWithoutMetadata().contains("LootTable", 8)) {
+        if (state.getValue(ChestBlock.TYPE) != ChestType.SINGLE) {
+            DoubleChestLootHandler.handle(level, player, pos, state, chest);
             return;
         }
 
-        // Создаём обычную добычу сундука.
-        chest.unpackLootTable(player);
+        if (!hasPendingLoot(chest)) {
+            return;
+        }
 
-        // Равные шансы от x0 до x8.
         int multiplier = level.random.nextInt(9);
+
+        multiplyChest(level, player, chest, pos, multiplier);
+        showSingleResult(level, pos, multiplier);
+    }
+
+    /**
+     * Таблица добычи присутствует в NBT до генерации содержимого.
+     */
+    static boolean hasPendingLoot(ChestBlockEntity chest) {
+        return chest.saveWithoutMetadata()
+                .contains("LootTable", Tag.TAG_STRING);
+    }
+
+    /**
+     * Генерирует и умножает содержимое одной половины сундука.
+     * Не вызывается для уже сгенерированных половин.
+     */
+    static void multiplyChest(
+            ServerLevel level,
+            ServerPlayer player,
+            ChestBlockEntity chest,
+            BlockPos dropPos,
+            int multiplier
+    ) {
+        chest.unpackLootTable(player);
 
         List<ItemStack> originalItems = new ArrayList<>();
 
@@ -86,7 +113,6 @@ public final class ChestLootHandler {
             chest.setItem(slot, ItemStack.EMPTY);
         }
 
-        List<ItemStack> overflow = new ArrayList<>();
         int nextSlot = 0;
 
         for (ItemStack original : originalItems) {
@@ -105,7 +131,16 @@ public final class ChestLootHandler {
                     chest.setItem(nextSlot, copy);
                     nextSlot++;
                 } else {
-                    overflow.add(copy);
+                    ItemEntity item = new ItemEntity(
+                            level,
+                            dropPos.getX() + 0.5D,
+                            dropPos.getY() + 1.1D,
+                            dropPos.getZ() + 0.5D,
+                            copy
+                    );
+
+                    item.setDefaultPickUpDelay();
+                    level.addFreshEntity(item);
                 }
 
                 remaining -= count;
@@ -113,25 +148,9 @@ public final class ChestLootHandler {
         }
 
         chest.setChanged();
-
-        // Предметы, которые не поместились, появляются рядом.
-        for (ItemStack stack : overflow) {
-            ItemEntity item = new ItemEntity(
-                    level,
-                    pos.getX() + 0.5D,
-                    pos.getY() + 1.1D,
-                    pos.getZ() + 0.5D,
-                    stack
-            );
-
-            item.setDefaultPickUpDelay();
-            level.addFreshEntity(item);
-        }
-
-        showResult(level, pos, multiplier);
     }
 
-    private static void showResult(
+    private static void showSingleResult(
             ServerLevel level,
             BlockPos pos,
             int multiplier
@@ -140,18 +159,14 @@ public final class ChestLootHandler {
         double centerY = pos.getY() + 0.7D;
         double centerZ = pos.getZ() + 0.5D;
 
-        int points = 32;
-
-        for (int i = 0; i < points; i++) {
-            double angle = 2.0D * Math.PI * i / points;
-            double x = centerX + Math.cos(angle);
-            double z = centerZ + Math.sin(angle);
+        for (int i = 0; i < 32; i++) {
+            double angle = 2.0D * Math.PI * i / 32.0D;
 
             level.sendParticles(
                     ParticleTypes.HAPPY_VILLAGER,
-                    x,
+                    centerX + Math.cos(angle),
                     centerY,
-                    z,
+                    centerZ + Math.sin(angle),
                     1,
                     0.0D,
                     0.0D,
