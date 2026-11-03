@@ -46,7 +46,7 @@ public class MultiActionMod {
         ITEMS.register(modBus);
         LOOT_MODIFIERS.register(modBus);
 
-        // Сеть для интерфейса рулетки.
+        // Сеть для рулетки и газовой атаки.
         ModNetwork.register();
     }
 
@@ -55,8 +55,9 @@ public class MultiActionMod {
 
         @SubscribeEvent
         public static void onServerStopped(ServerStoppedEvent event) {
-            // Текущие настройки множителей пока хранятся в памяти.
+            // Очищаем данные, хранящиеся в памяти.
             MulticastManager.clearAll();
+            GasAttack.clearAll();
         }
     }
 }
