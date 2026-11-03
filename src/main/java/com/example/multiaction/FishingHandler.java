@@ -92,7 +92,7 @@ public final class FishingHandler {
         // Тихий короткий звук только для самого игрока.
         player.playNotifySound(
                 multiplier == 0
-                        ? SoundEvents.UI_BUTTON_CLICK
+                        ? SoundEvents.UI_BUTTON_CLICK.value()
                         : SoundEvents.EXPERIENCE_ORB_PICKUP,
                 SoundSource.PLAYERS,
                 0.25F,
