@@ -1,13 +1,12 @@
 package com.example.multiaction;
 
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import net.minecraft.world.level.saveddata.SavedData;
 
 public final class MulticastManager {
 
+    // 4 минуты 11 секунд при обычной скорости игры.
     public static final long POTION_DURATION_TICKS = 251L * 20L;
 
     private static final int[] NORMAL_WEIGHTS = {
@@ -17,12 +16,8 @@ public final class MulticastManager {
 
     private static final int[] BALANCED_WEIGHTS = {
             20, 800, 120, 40, 15, 8, 5, 3, 2,
-            2, 1, 1, 1, 1, 1, 1, 1
+            2, 1, 1, 1, 1, 1, 1, 1, 1
     };
-
-    private static final Map<UUID, Integer> FORCED = new HashMap<>();
-    private static final Map<UUID, TimedMultiplier> POTIONS = new HashMap<>();
-    private static final Map<UUID, ProbabilityMode> MODES = new HashMap<>();
 
     private MulticastManager() {
     }
@@ -34,28 +29,39 @@ public final class MulticastManager {
     }
 
     public static int roll(ServerPlayer player) {
-        UUID id = player.getUUID();
+        PlayerSettingsData data = getData(player);
+        CompoundTag settings = data.getPlayerSettings(player);
 
-        Integer forced = FORCED.get(id);
-        if (forced != null) {
-            return forced;
+        // Админская фиксация имеет наивысший приоритет.
+        if (settings.contains("Forced")) {
+            int forced = settings.getInt("Forced");
+
+            if (forced >= 0 && forced <= 16) {
+                return forced;
+            }
         }
 
-        TimedMultiplier potion = POTIONS.get(id);
-        if (potion != null) {
+        if (settings.contains("PotionMultiplier")
+                && settings.contains("PotionExpires")) {
             long now = player.server.overworld().getGameTime();
+            int potionMultiplier = settings.getInt("PotionMultiplier");
 
-            if (now < potion.expiresAt()) {
-                return potion.multiplier();
+            if (now < settings.getLong("PotionExpires")
+                    && potionMultiplier >= 0
+                    && potionMultiplier <= 16) {
+                return potionMultiplier;
             }
 
-            POTIONS.remove(id);
+            settings.remove("PotionMultiplier");
+            settings.remove("PotionExpires");
+            data.setPlayerSettings(player, settings);
         }
 
         return rollRandom(player);
     }
 
     public static int rollForPotion(ServerPlayer player) {
+        // Зелье выбирает новый случайный результат даже при фиксации.
         return rollRandom(player);
     }
 
@@ -71,6 +77,7 @@ public final class MulticastManager {
                 : NORMAL_WEIGHTS;
 
         int total = 0;
+
         for (int weight : weights) {
             total += weight;
         }
@@ -79,6 +86,7 @@ public final class MulticastManager {
 
         for (int multiplier = 0; multiplier < weights.length; multiplier++) {
             value -= weights[multiplier];
+
             if (value < 0) {
                 return multiplier;
             }
@@ -91,17 +99,29 @@ public final class MulticastManager {
             ServerPlayer player,
             int multiplier
     ) {
+        PlayerSettingsData data = getData(player);
+        CompoundTag settings = data.getPlayerSettings(player);
+
         if (multiplier == -1) {
-            FORCED.remove(player.getUUID());
-            return;
+            settings.remove("Forced");
+        } else {
+            validate(multiplier);
+            settings.putInt("Forced", multiplier);
         }
 
-        validate(multiplier);
-        FORCED.put(player.getUUID(), multiplier);
+        data.setPlayerSettings(player, settings);
     }
 
     public static Integer getForcedMultiplier(ServerPlayer player) {
-        return FORCED.get(player.getUUID());
+        CompoundTag settings = getData(player).getPlayerSettings(player);
+
+        if (!settings.contains("Forced")) {
+            return null;
+        }
+
+        int forced = settings.getInt("Forced");
+
+        return forced >= 0 && forced <= 16 ? forced : null;
     }
 
     public static void applyPotionMultiplier(
@@ -110,37 +130,51 @@ public final class MulticastManager {
     ) {
         validate(multiplier);
 
+        PlayerSettingsData data = getData(player);
+        CompoundTag settings = data.getPlayerSettings(player);
         long now = player.server.overworld().getGameTime();
 
-        POTIONS.put(
-                player.getUUID(),
-                new TimedMultiplier(
-                        multiplier,
-                        now + POTION_DURATION_TICKS
-                )
-        );
+        settings.putInt("PotionMultiplier", multiplier);
+        settings.putLong("PotionExpires", now + POTION_DURATION_TICKS);
+
+        data.setPlayerSettings(player, settings);
     }
 
     public static void clearPotionMultiplier(ServerPlayer player) {
-        POTIONS.remove(player.getUUID());
+        PlayerSettingsData data = getData(player);
+        CompoundTag settings = data.getPlayerSettings(player);
+
+        settings.remove("PotionMultiplier");
+        settings.remove("PotionExpires");
+
+        data.setPlayerSettings(player, settings);
     }
 
     public static ProbabilityMode getMode(ServerPlayer player) {
-        return MODES.getOrDefault(
-                player.getUUID(),
-                ProbabilityMode.NORMAL
-        );
+        CompoundTag settings = getData(player).getPlayerSettings(player);
+        String savedMode = settings.getString("Mode");
+
+        try {
+            return ProbabilityMode.valueOf(savedMode);
+        } catch (IllegalArgumentException exception) {
+            return ProbabilityMode.NORMAL;
+        }
     }
 
     public static void setMode(
             ServerPlayer player,
             ProbabilityMode mode
     ) {
+        PlayerSettingsData data = getData(player);
+        CompoundTag settings = data.getPlayerSettings(player);
+
         if (mode == ProbabilityMode.NORMAL) {
-            MODES.remove(player.getUUID());
+            settings.remove("Mode");
         } else {
-            MODES.put(player.getUUID(), mode);
+            settings.putString("Mode", mode.name());
         }
+
+        data.setPlayerSettings(player, settings);
     }
 
     public static boolean toggleEqual(ServerPlayer player) {
@@ -153,10 +187,11 @@ public final class MulticastManager {
         return true;
     }
 
+    /*
+     * Метод оставлен для совместимости с MultiActionMod.
+     * Настройки теперь принадлежат миру и удалять их при остановке нельзя.
+     */
     public static void clearAll() {
-        FORCED.clear();
-        POTIONS.clear();
-        MODES.clear();
     }
 
     private static void validate(int multiplier) {
@@ -167,6 +202,52 @@ public final class MulticastManager {
         }
     }
 
-    private record TimedMultiplier(int multiplier, long expiresAt) {
+    private static PlayerSettingsData getData(ServerPlayer player) {
+        return player.server.overworld()
+                .getDataStorage()
+                .computeIfAbsent(
+                        PlayerSettingsData::load,
+                        PlayerSettingsData::new,
+                        "multiaction_players"
+                );
+    }
+
+    public static final class PlayerSettingsData extends SavedData {
+
+        private CompoundTag players = new CompoundTag();
+
+        public PlayerSettingsData() {
+        }
+
+        public static PlayerSettingsData load(CompoundTag tag) {
+            PlayerSettingsData data = new PlayerSettingsData();
+            data.players = tag.getCompound("Players").copy();
+            return data;
+        }
+
+        @Override
+        public CompoundTag save(CompoundTag tag) {
+            tag.put("Players", players.copy());
+            return tag;
+        }
+
+        private CompoundTag getPlayerSettings(ServerPlayer player) {
+            return players.getCompound(player.getUUID().toString()).copy();
+        }
+
+        private void setPlayerSettings(
+                ServerPlayer player,
+                CompoundTag settings
+        ) {
+            String id = player.getUUID().toString();
+
+            if (settings.isEmpty()) {
+                players.remove(id);
+            } else {
+                players.put(id, settings.copy());
+            }
+
+            setDirty();
+        }
     }
 }
