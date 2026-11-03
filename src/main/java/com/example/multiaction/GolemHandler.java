@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -103,9 +104,16 @@ public final class GolemHandler {
         int multiplier = MulticastManager.roll(player);
 
         if (multiplier == 0) {
-            // Исходная конструкция уже расходуется игрой, поэтому
-            // оставляем обычного голема и отменяем только дополнительные.
+            // Обычного голема оставляем: конструкция уже расходуется игрой.
             MultiplierDisplay.show(player, 0);
+
+            player.displayClientMessage(
+                    Component.literal(
+                            "§c✘ Создание дополнительных големов сорвалось!"
+                    ),
+                    true
+            );
+
             return;
         }
 
@@ -124,7 +132,6 @@ public final class GolemHandler {
                     continue;
                 }
 
-                // Небольшой разброс, чтобы големы не стояли точно в одной точке.
                 double x = original.getX()
                         + (player.getRandom().nextDouble() - 0.5D) * 2.0D;
                 double z = original.getZ()
@@ -147,8 +154,17 @@ public final class GolemHandler {
         }
 
         if (created > 0) {
-            // Дополнительные големы плюс исходный.
-            MultiplierDisplay.show(player, created + 1);
+            int total = created + 1;
+
+            MultiplierDisplay.show(player, total);
+
+            player.displayClientMessage(
+                    Component.literal(
+                            "§6✦ Мультиголемы: §e" + total
+                                    + " §7(дополнительно: " + created + ")"
+                    ),
+                    true
+            );
         }
     }
 
