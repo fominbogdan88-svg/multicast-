@@ -56,6 +56,9 @@ public final class ShearingHandler {
         event.setCanceled(true);
         event.setCancellationResult(InteractionResult.SUCCESS);
 
+        // Надпись над игроком: x1 пропускается, x0 показывает «Срыв!».
+        MultiplierDisplay.show(player, multiplier);
+
         if (multiplier == 0) {
             player.displayClientMessage(
                     Component.literal("§c✘ Стрижка сорвалась!"),
