@@ -24,6 +24,9 @@ public class MultiActionMod {
     public static final RegistryObject<Item> HAND_OF_MIDAS =
             ITEMS.register("hand_of_midas", HandOfMidasItem::new);
 
+    public static final RegistryObject<Item> MAGIC_WAND =
+            ITEMS.register("magic_wand", MagicWandItem::new);
+
     // Регистрация модификатора дропа блоков.
     public static final DeferredRegister<Codec<? extends IGlobalLootModifier>>
             LOOT_MODIFIERS = DeferredRegister.create(
@@ -43,7 +46,7 @@ public class MultiActionMod {
         ITEMS.register(modBus);
         LOOT_MODIFIERS.register(modBus);
 
-        // Регистрация пакета для интерфейса рулетки.
+        // Сеть для интерфейса рулетки.
         ModNetwork.register();
     }
 
@@ -52,7 +55,7 @@ public class MultiActionMod {
 
         @SubscribeEvent
         public static void onServerStopped(ServerStoppedEvent event) {
-            // Текущие настройки множителей хранятся только в памяти.
+            // Текущие настройки множителей пока хранятся в памяти.
             MulticastManager.clearAll();
         }
     }
