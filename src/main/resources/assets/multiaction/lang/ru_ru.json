@@ -1,4 +1,6 @@
 {
   "item.multiaction.hand_of_midas": "Рука Мидаса",
-  "item.multiaction.magic_wand": "Волшебная палочка"
+  "item.multiaction.magic_wand": "Волшебная палочка",
+  "key.multiaction.gas": "Газовая атака",
+  "key.categories.multiaction": "MultiAction"
 }
