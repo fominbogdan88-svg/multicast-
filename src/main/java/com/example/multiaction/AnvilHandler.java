@@ -27,22 +27,26 @@ public final class AnvilHandler {
             return;
         }
 
-        // Ковка ограничена x2, даже если выпал множитель выше.
+        // Даже если выпало x16, для наковальни максимум x2.
         int multiplier = Math.min(MulticastManager.roll(player), 2);
 
-        // При x0 и x1 остаётся только обычный результат наковальни.
+        // При x0 и x1 остаётся только обычный результат.
         if (multiplier <= 1) {
             return;
         }
 
+        // Оригинал выдаёт наковальня.
         ItemStack extra = result.copy();
 
-        // Если копия не поместилась в инвентарь, она выпадет рядом.
         player.getInventory().add(extra);
 
+        // Если копия не поместилась, она выпадет рядом.
         if (!extra.isEmpty()) {
             player.drop(extra, false);
         }
+
+        // Надпись видна другим игрокам над головой.
+        MultiplierDisplay.show(player, 2);
 
         player.displayClientMessage(
                 Component.literal("§6✦ Мультиковка: x2"),
