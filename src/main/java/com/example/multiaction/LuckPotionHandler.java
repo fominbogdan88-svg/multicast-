@@ -1,7 +1,6 @@
 package com.example.multiaction;
 
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.PotionUtils;
@@ -31,16 +30,15 @@ public final class LuckPotionHandler {
             return;
         }
 
-        // Результат выбирается на сервере, а не на клиенте.
+        // Результат выбирается на сервере.
         int multiplier = MulticastManager.rollForPotion(player);
 
-        // Фиксируем его на 4 минуты 11 секунд.
+        // Фиксируем его на 4 минуты 11 секунд игрового времени.
         MulticastManager.applyPotionMultiplier(player, multiplier);
 
-        // Убираем стандартный эффект удачи.
-        player.removeEffect(MobEffects.LUCK);
-
-        // Отправляем результат клиенту для показа интерфейса.
+        // Показываем рулетку игроку.
         ModNetwork.sendRoulette(player, multiplier);
+
+        // Обычный эффект удачи больше не удаляем.
     }
 }
