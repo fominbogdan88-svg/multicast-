@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.monster.piglin.Piglin;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraftforge.common.loot.IGlobalLootModifier;
 import net.minecraftforge.common.loot.LootModifier;
@@ -38,16 +39,13 @@ public class PiglinBarterModifier extends LootModifier {
             return generatedLoot;
         }
 
-        // Случайный результат не зависит от настроек игрока.
-        if (!(context.getLevel() instanceof ServerLevel level)) {
-            return generatedLoot;
-        }
+        ServerLevel level = context.getLevel();
 
+        // Отдельный случайный результат пиглина: от x0 до x16.
         int multiplier = level.random.nextInt(17);
 
-        if (context.getParamOrNull(
-                net.minecraft.world.level.storage.loot.parameters.LootContextParams.THIS_ENTITY
-        ) instanceof Piglin piglin) {
+        if (context.getParamOrNull(LootContextParams.THIS_ENTITY)
+                instanceof Piglin piglin) {
             MultiplierDisplay.show(piglin, multiplier);
         }
 
