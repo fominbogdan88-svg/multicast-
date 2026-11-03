@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.AbstractArrow;
+import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -29,12 +30,30 @@ public class PlayerProjectileHandler {
             return;
         }
 
-        // AbstractArrow включает стрелы и трезубцы.
-        if (!(event.getEntity() instanceof AbstractArrow projectile)) {
+        if (!(event.getEntity() instanceof Projectile projectile)) {
+            return;
+        }
+
+        boolean arrow = projectile instanceof AbstractArrow;
+        boolean rocket = projectile instanceof FireworkRocketEntity;
+
+        // Другие снаряды, включая рыболовный поплавок, не обрабатываем.
+        if (!arrow && !rocket) {
             return;
         }
 
         if (!(projectile.getOwner() instanceof ServerPlayer player)) {
+            return;
+        }
+
+        CompoundTag projectileData = new CompoundTag();
+        projectile.saveWithoutId(projectileData);
+
+        /*
+         * Ракеты, выпущенные из арбалета, сохраняются с ShotAtAngle.
+         * Ракеты для элитр и обычные запущенные ракеты пропускаем.
+         */
+        if (rocket && !projectileData.getBoolean("ShotAtAngle")) {
             return;
         }
 
@@ -49,9 +68,6 @@ public class PlayerProjectileHandler {
             MultiplierDisplay.show(player, 0);
             return;
         }
-
-        CompoundTag projectileData = new CompoundTag();
-        projectile.saveWithoutId(projectileData);
 
         int createdCount = 0;
         CREATING_COPIES.set(true);
@@ -79,7 +95,7 @@ public class PlayerProjectileHandler {
                 );
                 copy.setDeltaMovement(projectile.getDeltaMovement());
 
-                // Дополнительные снаряды нельзя подобрать в выживании.
+                // Копии стрел и трезубцев нельзя подобрать в выживании.
                 if (copy instanceof AbstractArrow arrowCopy) {
                     arrowCopy.pickup = AbstractArrow.Pickup.CREATIVE_ONLY;
                 }
