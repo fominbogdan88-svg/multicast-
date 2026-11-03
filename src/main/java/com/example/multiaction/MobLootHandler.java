@@ -91,6 +91,9 @@ public final class MobLootHandler {
     }
 
     private static void showResult(ServerPlayer player, int multiplier) {
+        // Показываем результат над игроком, получившим дроп.
+        MultiplierDisplay.show(player, multiplier);
+
         String message = multiplier == 0
                 ? "§c✘ Добыча с моба сорвалась!"
                 : "§6✦ Добыча с моба: x" + multiplier;
