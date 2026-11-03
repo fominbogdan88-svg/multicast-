@@ -73,6 +73,8 @@ public class HandOfMidasItem extends Item {
         showMultiplier(serverPlayer, multiplier);
 
         if (multiplier == 0) {
+            MultiplierDisplay.show(serverPlayer, 0);
+
             level.playSound(
                     null,
                     serverPlayer.blockPosition(),
@@ -120,6 +122,9 @@ public class HandOfMidasItem extends Item {
         }
 
         if (exchanged > 0) {
+            // x1 метод отображения пропустит.
+            MultiplierDisplay.show(serverPlayer, exchanged);
+
             serverPlayer.giveExperiencePoints(totalXp);
 
             level.playSound(
@@ -194,7 +199,6 @@ public class HandOfMidasItem extends Item {
     /**
      * Простое разделение по максимальному здоровью.
      *
-     * Позже можно заменить на отдельную настраиваемую таблицу.
      * Приблизительное правило:
      * - до 20 HP: уровень 0;
      * - до 40 HP: уровень 10;
