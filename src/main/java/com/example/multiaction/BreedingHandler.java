@@ -31,11 +31,13 @@ public final class BreedingHandler {
             return;
         }
 
-        AgeableMob parentA = event.getParentA();
-        AgeableMob parentB = event.getParentB();
-        AgeableMob originalBaby = event.getChild();
+        // Родители события имеют тип Mob, поэтому проверяем их.
+        if (!(event.getParentA() instanceof AgeableMob parentA)
+                || !(event.getParentB() instanceof AgeableMob parentB)) {
+            return;
+        }
 
-        if (parentA == null || parentB == null || originalBaby == null) {
+        if (event.getChild() == null) {
             return;
         }
 
@@ -74,7 +76,7 @@ public final class BreedingHandler {
                     Component.literal(
                             "§a✦ Мультиразмножение: дополнительно "
                                     + spawned
-                            ),
+                    ),
                     true
             );
 
