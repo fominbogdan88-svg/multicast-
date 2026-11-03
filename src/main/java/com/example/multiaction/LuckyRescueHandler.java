@@ -130,12 +130,9 @@ public final class LuckyRescueHandler {
                 1.0F
         );
 
+        // Фраза показывается над хотбаром, а не в общем чате.
         player.displayClientMessage(
-                Component.literal(
-                        test
-                                ? "§6✦ Проверка: спасение без тотема сработало!"
-                                : "§6✦ Невероятная удача! Ты спасся без тотема!"
-                ),
+                Component.literal("§6✦ §eКороля не убить! §6✦"),
                 true
         );
     }
