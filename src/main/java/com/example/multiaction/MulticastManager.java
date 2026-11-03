@@ -6,7 +6,6 @@ import net.minecraft.world.level.saveddata.SavedData;
 
 public final class MulticastManager {
 
-    // 4 минуты 11 секунд при обычной скорости игры.
     public static final long POTION_DURATION_TICKS = 251L * 20L;
 
     private static final int[] NORMAL_WEIGHTS = {
@@ -32,12 +31,13 @@ public final class MulticastManager {
         PlayerSettingsData data = getData(player);
         CompoundTag settings = data.getPlayerSettings(player);
 
-        // Админская фиксация имеет наивысший приоритет.
+        int base;
+
         if (settings.contains("Forced")) {
             int forced = settings.getInt("Forced");
 
             if (forced >= 0 && forced <= 16) {
-                return forced;
+                return addBonus(forced, settings);
             }
         }
 
@@ -49,7 +49,7 @@ public final class MulticastManager {
             if (now < settings.getLong("PotionExpires")
                     && potionMultiplier >= 0
                     && potionMultiplier <= 16) {
-                return potionMultiplier;
+                return addBonus(potionMultiplier, settings);
             }
 
             settings.remove("PotionMultiplier");
@@ -57,11 +57,20 @@ public final class MulticastManager {
             data.setPlayerSettings(player, settings);
         }
 
-        return rollRandom(player);
+        base = rollRandom(player);
+        return addBonus(base, settings);
     }
 
+    private static int addBonus(int base, CompoundTag settings) {
+        int bonus = Math.max(0, Math.min(16, settings.getInt("PotatoBonus")));
+        return Math.min(16, base + bonus);
+    }
+
+    /*
+     * Рулетка выбирает базовый множитель.
+     * Бонус прибавляется при последующих действиях через roll().
+     */
     public static int rollForPotion(ServerPlayer player) {
-        // Зелье выбирает новый случайный результат даже при фиксации.
         return rollRandom(player);
     }
 
@@ -77,7 +86,6 @@ public final class MulticastManager {
                 : NORMAL_WEIGHTS;
 
         int total = 0;
-
         for (int weight : weights) {
             total += weight;
         }
@@ -120,7 +128,6 @@ public final class MulticastManager {
         }
 
         int forced = settings.getInt("Forced");
-
         return forced >= 0 && forced <= 16 ? forced : null;
     }
 
@@ -187,10 +194,32 @@ public final class MulticastManager {
         return true;
     }
 
-    /*
-     * Метод оставлен для совместимости с MultiActionMod.
-     * Настройки теперь принадлежат миру и удалять их при остановке нельзя.
+    public static int getPotatoBonus(ServerPlayer player) {
+        CompoundTag settings = getData(player).getPlayerSettings(player);
+        return Math.max(0, Math.min(16, settings.getInt("PotatoBonus")));
+    }
+
+    /**
+     * Добавляет один постоянный бонус и возвращает его новое значение.
      */
+    public static int addPotatoBonus(ServerPlayer player) {
+        PlayerSettingsData data = getData(player);
+        CompoundTag settings = data.getPlayerSettings(player);
+
+        int current = Math.max(
+                0,
+                Math.min(16, settings.getInt("PotatoBonus"))
+        );
+
+        int updated = Math.min(16, current + 1);
+
+        settings.putInt("PotatoBonus", updated);
+        data.setPlayerSettings(player, settings);
+
+        return updated;
+    }
+
+    // Оставлено для совместимости с MultiActionMod.
     public static void clearAll() {
     }
 
