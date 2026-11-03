@@ -27,13 +27,15 @@ public final class SmeltingHandler {
             return;
         }
 
-        int multiplier = MulticastManager.roll(player);
+        // Максимум для плавки — x4.
+        int multiplier = Math.min(MulticastManager.roll(player), 4);
 
+        // При x0 и x1 остаётся обычный результат печи.
         if (multiplier <= 1) {
             return;
         }
 
-        // Оригинальный результат уже выдаётся обычной механикой.
+        // Оригинал выдаёт печь, поэтому создаём только дополнительные копии.
         long remaining = (long) result.getCount() * (multiplier - 1);
         int maxStackSize = result.getMaxStackSize();
 
@@ -45,7 +47,7 @@ public final class SmeltingHandler {
 
             player.getInventory().add(extra);
 
-            // Если инвентарь заполнен, остаток выпадет рядом.
+            // Если инвентарь заполнен, остаток выпадает рядом.
             if (!extra.isEmpty()) {
                 player.drop(extra, false);
             }
@@ -53,6 +55,10 @@ public final class SmeltingHandler {
             remaining -= count;
         }
 
+        // Множитель над головой виден окружающим.
+        MultiplierDisplay.show(player, multiplier);
+
+        // Личное сообщение над панелью быстрого доступа.
         player.displayClientMessage(
                 Component.literal("§6✦ Мультиплавка: x" + multiplier),
                 true
