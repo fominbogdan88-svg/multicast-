@@ -19,7 +19,6 @@ public final class DamageHandler {
 
     @SubscribeEvent
     public static void onLivingHurt(LivingHurtEvent event) {
-        // Урон рассчитываем только на сервере.
         if (event.getEntity().level().isClientSide) {
             return;
         }
@@ -41,12 +40,16 @@ public final class DamageHandler {
 
         if (multiplier == 0) {
             event.setCanceled(true);
-            showPlayerResult(player, multiplier);
+
+            MultiplierDisplay.show(player, 0);
+            showPlayerResult(player, 0);
             return;
         }
 
         if (multiplier > 1) {
             event.setAmount(event.getAmount() * multiplier);
+
+            MultiplierDisplay.show(player, multiplier);
             showPlayerResult(player, multiplier);
         }
     }
@@ -59,16 +62,18 @@ public final class DamageHandler {
         int multiplier;
 
         if (roll == 0) {
-            multiplier = 3;
+            multiplier = 3; // 0,1%
         } else if (roll <= 10) {
-            multiplier = 2;
+            multiplier = 2; // 1%
         } else {
             return;
         }
 
         event.setAmount(event.getAmount() * multiplier);
 
-        // Уведомляем только игрока, которого ударил моб.
+        // Надпись видна окружающим над головой атакующего моба.
+        MultiplierDisplay.show(mob, multiplier);
+
         if (event.getEntity() instanceof Player target) {
             target.displayClientMessage(
                     Component.literal(
