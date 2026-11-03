@@ -53,6 +53,8 @@ public final class BlockBreakingHandler {
         if (multiplier == 0) {
             event.setCanceled(true);
 
+            MultiplierDisplay.show(player, 0);
+
             player.displayClientMessage(
                     Component.literal("§c✘ Добыча блока сорвалась!"),
                     true
@@ -64,6 +66,9 @@ public final class BlockBreakingHandler {
         if (multiplier == 1) {
             return;
         }
+
+        // Показываем выбранный множитель над игроком.
+        MultiplierDisplay.show(player, multiplier);
 
         ServerLevel level = player.serverLevel();
         BlockPos origin = event.getPos().immutable();
