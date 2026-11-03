@@ -34,7 +34,7 @@ public final class BarkStrippingHandler {
 
         ItemStack tool = event.getItemStack();
 
-        // Проверяем именно способность снимать кору, а не название предмета.
+        // Проверяем способность снимать кору, а не название предмета.
         if (!tool.canPerformAction(ToolActions.AXE_STRIP)) {
             return;
         }
@@ -60,6 +60,9 @@ public final class BarkStrippingHandler {
         }
 
         int multiplier = MulticastManager.roll(player);
+
+        // x1 метод сам пропустит; x0 покажет «Срыв!».
+        MultiplierDisplay.show(player, multiplier);
 
         player.displayClientMessage(
                 Component.literal(
