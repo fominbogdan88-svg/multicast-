@@ -1,0 +1,9 @@
+{
+  "type": "multiaction:piglin_barter",
+  "conditions": [
+    {
+      "condition": "forge:loot_table_id",
+      "loot_table_id": "minecraft:gameplay/piglin_bartering"
+    }
+  ]
+}
