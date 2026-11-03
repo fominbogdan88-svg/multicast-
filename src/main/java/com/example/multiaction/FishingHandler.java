@@ -24,25 +24,27 @@ public final class FishingHandler {
             return;
         }
 
-        int multiplier = MulticastManager.roll(player);
-
-        showResult(player, multiplier);
-
         List<ItemStack> drops = event.getDrops();
+
+        // Если улова нет, не выполняем бросок.
+        if (drops.isEmpty()) {
+            return;
+        }
+
+        int multiplier = MulticastManager.roll(player);
 
         if (multiplier == 0) {
             drops.clear();
+
+            MultiplierDisplay.show(player, 0);
+            showResult(player, 0);
             return;
         }
 
-        if (multiplier == 1 || drops.isEmpty()) {
+        if (multiplier == 1) {
             return;
         }
 
-        /*
-         * Сначала создаём отдельный список. Нельзя добавлять предметы
-         * в drops прямо во время перебора этого же списка.
-         */
         List<ItemStack> multipliedDrops = new ArrayList<>();
 
         for (ItemStack original : drops) {
@@ -53,11 +55,7 @@ public final class FishingHandler {
             long remaining = (long) original.getCount() * multiplier;
             int maxStackSize = original.getMaxStackSize();
 
-            /*
-             * Разбиваем результат на допустимые стаки.
-             * Например, 16 неповреждённых удочек — это 16 отдельных
-             * стаков, а не один стак с недопустимым количеством.
-             */
+            // Разделяем результат на допустимые стаки.
             while (remaining > 0) {
                 int count = (int) Math.min(remaining, maxStackSize);
 
@@ -71,32 +69,26 @@ public final class FishingHandler {
 
         drops.clear();
         drops.addAll(multipliedDrops);
+
+        MultiplierDisplay.show(player, multiplier);
+        showResult(player, multiplier);
     }
 
-    private static void showResult(ServerPlayer player, int multiplier) {
-        String message;
+    private static void showResult(
+            ServerPlayer player,
+            int multiplier
+    ) {
+        String message = multiplier == 0
+                ? "§c✘ Рыбалка: улов сорвался!"
+                : "§e✦ Мультиулов: x" + multiplier;
 
-        if (multiplier == 0) {
-            message = "§c✘ Рыбалка: улов сорвался!";
-        } else if (multiplier == 1) {
-            message = "§7🎣 Рыбалка: x1";
-        } else if (multiplier >= 10) {
-            message = "§6★ Мультиулов: x" + multiplier + "!";
-        } else {
-            message = "§e✦ Мультиулов: x" + multiplier;
-        }
-
-        // Сообщение над панелью быстрого доступа, а не в чате.
         player.displayClientMessage(Component.literal(message), true);
 
-        // Тихий короткий звук только для самого игрока.
         player.playNotifySound(
-                multiplier == 0
-                        ? SoundEvents.UI_BUTTON_CLICK.value()
-                        : SoundEvents.EXPERIENCE_ORB_PICKUP,
+                SoundEvents.EXPERIENCE_ORB_PICKUP,
                 SoundSource.PLAYERS,
                 0.25F,
-                multiplier == 0 ? 0.7F : 1.4F
+                multiplier == 0 ? 0.8F : 1.4F
         );
     }
 }
