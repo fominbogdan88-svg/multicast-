@@ -1,6 +1,7 @@
 {
   "replace": false,
   "entries": [
-    "multiaction:block_drops"
+    "multiaction:block_drops",
+    "multiaction:piglin_barter"
   ]
 }
